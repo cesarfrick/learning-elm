@@ -183,8 +183,8 @@ view model =
     div [ class "scoreboard" ]
         [ h1 [] [ text "Score Keeper" ]
         , playerSection model
-        , playSection model
         , playerForm model
+        , playSection model
         ]
 
 
