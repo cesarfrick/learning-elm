@@ -68,8 +68,54 @@ update msg model =
             else
                 save model
 
-        _ ->
-            model
+        Score player points ->
+            score model player points
+
+        Edit player ->
+            { model | name = player.name, playerId = Just player.id }
+
+        DeletePlay play ->
+            deletePlay model play
+
+
+deletePlay : Model -> Play -> Model
+deletePlay model play =
+    let
+        newPlays =
+            List.filter (\p -> p.id /= play.id) model.plays
+
+        newPlayers =
+            List.map
+                (\player ->
+                    if player.id == play.playerId then
+                        { player | points = player.points - 1 * play.points }
+                    else
+                        player
+                )
+                model.players
+    in
+        { model | plays = newPlays, players = newPlayers }
+
+
+score : Model -> Player -> Int -> Model
+score model scorer points =
+    let
+        newPlayers =
+            List.map
+                (\player ->
+                    if player.id == scorer.id then
+                        { player
+                            | points = player.points + points
+                        }
+                    else
+                        player
+                )
+                model.players
+
+        play =
+            Play (List.length model.plays) scorer.id scorer.name points
+    in
+        { model | players = newPlayers, plays = play :: model.plays }
 
 
 save : Model -> Model
@@ -136,8 +182,111 @@ view : Model -> Html Msg
 view model =
     div [ class "scoreboard" ]
         [ h1 [] [ text "Score Keeper" ]
+        , playerSection model
+        , playSection model
         , playerForm model
         ]
+
+
+playSection : Model -> Html Msg
+playSection model =
+    div []
+        [ playListHeader
+        , playList model
+        ]
+
+
+playListHeader : Html Msg
+playListHeader =
+    div []
+        [ div [] [ text "Plays" ]
+        , div [] [ text "Points" ]
+        ]
+
+
+playList : Model -> Html Msg
+playList model =
+    model.plays
+        |> List.map play
+        |> ul []
+
+
+play : Play -> Html Msg
+play play =
+    li []
+        [ i
+            [ class "remove"
+            , onClick (DeletePlay play)
+            ]
+            []
+        , div [] [ text play.name ]
+        , div [] [ text (toString play.points) ]
+        ]
+
+
+playerSection : Model -> Html Msg
+playerSection model =
+    div []
+        [ playerListHeader
+        , playerList model
+        , pointTotal model
+        ]
+
+
+playerListHeader : Html Msg
+playerListHeader =
+    header []
+        [ div [] [ text "Name" ]
+        , div [] [ text "Points" ]
+        ]
+
+
+playerList : Model -> Html Msg
+playerList model =
+    -- ul []
+    --     (List.map player model.players)
+    model.players
+        |> List.sortBy .name
+        |> List.map player
+        |> ul []
+
+
+player : Player -> Html Msg
+player player =
+    li []
+        [ i
+            [ class "edit"
+            , onClick (Edit player)
+            ]
+            []
+        , div []
+            [ text player.name ]
+        , button
+            [ type_ "button"
+            , onClick (Score player 2)
+            ]
+            [ text "2pt" ]
+        , button
+            [ type_ "button"
+            , onClick (Score player 3)
+            ]
+            [ text "3pt" ]
+        , div []
+            [ text (toString player.points) ]
+        ]
+
+
+pointTotal : Model -> Html Msg
+pointTotal model =
+    let
+        total =
+            List.map .points model.plays
+                |> List.sum
+    in
+        footer []
+            [ div [] [ text "Total:" ]
+            , div [] [ text (toString total) ]
+            ]
 
 
 playerForm : Model -> Html Msg
